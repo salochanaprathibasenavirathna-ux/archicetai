@@ -1,0 +1,45 @@
+{
+  "name": "architectai",
+  "version": "1.3.0",
+  "description": "ArchitectAI - Flowchart, Code Guidance & Security Insights generator",
+  "author": "ArchitectAI contributors",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "node server.js",
+    "test": "node --test",
+    "build": "electron-builder --win portable",
+    "pack": "electron-builder --win --dir"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mammoth": "^1.8.0"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.blazey.architectai",
+    "productName": "ArchitectAI",
+    "npmRebuild": false,
+    "files": [
+      "main.js",
+      "server.js",
+      "public/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "ArchitectAI.exe"
+    }
+  }
+}

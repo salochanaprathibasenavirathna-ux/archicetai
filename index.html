@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArchitectAI</title>
+<link rel="icon" href="logo.png">
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--mute:#8b949e;--accent:#58a6ff;--ok:#3fb950;--bad:#f85149}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;display:flex;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI Emoji","Noto Color Emoji","Iskoola Pota","Noto Sans Sinhala",sans-serif}
+.left{width:38%;min-width:340px;display:flex;flex-direction:column;border-right:1px solid var(--line);position:relative}
+.right{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;flex:1}
+h1 span{color:var(--accent)}
+h1 img{width:28px;height:28px;vertical-align:-7px;margin-right:6px;border-radius:7px}
+.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:7px 12px;font-weight:500}
+.ghost:hover{border-color:var(--accent)}
+.badge{font-size:12px;padding:5px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--mute);cursor:pointer;white-space:nowrap}
+.badge.ok{color:var(--ok);border-color:var(--ok)}
+.badge.bad{color:var(--bad);border-color:var(--bad)}
+#chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 12px;border-radius:10px;max-width:92%;white-space:pre-wrap;line-height:1.5;font-size:14px;word-break:break-word}
+.user{background:#1f6feb;align-self:flex-end}
+.ai{background:var(--panel);border:1px solid var(--line);align-self:flex-start}
+.err{border-color:var(--bad);color:var(--bad)}
+.composer{border-top:1px solid var(--line);padding:10px 12px}
+.row{display:flex;gap:8px}
+textarea{flex:1;resize:none;height:64px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit}
+button{background:var(--accent);color:#04101f;border:0;border-radius:8px;padding:0 16px;font-weight:600;cursor:pointer;font-family:inherit}
+button:disabled{opacity:.5;cursor:wait}
+#attach{width:44px;padding:0;font-size:18px}
+#chip{display:none;margin-bottom:8px;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px;width:fit-content;max-width:100%}
+#chip.show{display:flex;gap:8px;align-items:center}
+#chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chip b{cursor:pointer;color:var(--bad)}
+.drawer{position:absolute;left:0;right:0;top:53px;bottom:0;background:var(--bg);z-index:5;transform:translateX(-100%);transition:transform .2s;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer h2{font-size:13px;color:var(--mute);margin:0;padding:12px 14px 6px;font-weight:600}
+#chatList{flex:1;overflow-y:auto;padding:0 10px 10px}
+.item{display:flex;align-items:center;gap:6px;padding:10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.item:hover{background:var(--panel)}
+.item.active{background:var(--panel);border-color:var(--accent)}
+.item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.item small{color:var(--mute);font-size:11px}
+.item .del{background:none;color:var(--mute);padding:2px 6px}
+.item .del:hover{color:var(--bad)}
+.drawer .none{color:var(--mute);text-align:center;margin-top:30px;font-size:14px}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{padding:12px 18px;cursor:pointer;color:var(--mute);border-bottom:2px solid transparent;background:none;border-radius:0;font-weight:500;white-space:nowrap}
+.tab.active{color:var(--text);border-color:var(--accent)}
+.pane{display:none;flex:1;overflow:auto;padding:16px}
+.pane.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;white-space:pre-wrap}
+.card b{display:block;margin-bottom:4px}
+.card small{color:var(--mute)}
+.fix{color:var(--ok);margin-top:6px}
+pre{background:#010409;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:13px;margin:8px 0 0}
+details.card summary{cursor:pointer;font-family:ui-monospace,Consolas,monospace;font-size:14px}
+#diagram{background:#fff;border-radius:10px;padding:12px;overflow:auto;margin-bottom:14px}
+.bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.bar button{padding:9px 14px}
+h3{margin:16px 0 8px;font-size:15px;color:var(--accent)}
+.empty{color:var(--mute);text-align:center;margin-top:20vh}
+
+.auth{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:20px}
+.auth[hidden]{display:none}
+.box{width:min(390px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.box h2{margin:0 0 4px;font-size:18px}
+.box p{margin:0 0 12px;color:var(--mute);font-size:13px;line-height:1.7}
+.box label{display:block;font-size:13px;color:var(--mute);margin:12px 0 5px}
+.f{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:14px}
+.f:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.f:disabled{opacity:.45}
+.go{width:100%;margin-top:16px;padding:11px}
+.seg{display:flex;gap:6px;margin:12px 0 4px}
+.seg button{flex:1;padding:9px;background:var(--bg);color:var(--mute);border:1px solid var(--line);font-weight:500}
+.seg button.on{color:var(--text);border-color:var(--accent)}
+.msgline{min-height:20px;margin-top:10px;font-size:13px;color:var(--bad)}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:0;max-width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog .box{border:0}
+.userrow{display:flex;align-items:center;gap:8px;padding:12px 14px 4px}
+.userrow b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.userrow button{padding:6px 11px;font-size:13px}
+.opts{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.opts .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.opts small{display:block;color:var(--mute);margin-bottom:5px;font-size:12px}
+.scope{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.scope label{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:14px}
+.scope label.on{border-color:var(--accent)}
+.scope input{accent-color:var(--accent)}
+.prog{height:8px;background:var(--bg);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 12px}
+.prog i{display:block;height:100%;background:var(--accent);width:4%;transition:width .4s}
+@media(max-width:700px){.opts .grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="left">
+  <div class="top">
+    <button id="menuBtn" class="ghost" title="Menu / History">☰</button>
+    <h1><img src="logo.png" alt="">Architect<span>AI</span></h1>
+    <span id="apiStatus" class="badge" title="API key එක පරීක්ෂා කරන්න">● API</span>
+    <button id="newBtn" class="ghost">＋ අලුත්</button>
+  </div>
+
+  <div id="drawer" class="drawer">
+    <div class="userrow"><b id="userName"></b><button id="keyBtn" class="ghost" title="ඔයාගේ Gemini API key">🔑 API key</button><button id="passwordBtn" class="ghost" title="Password එක වෙනස් කරන්න">🔒 Password</button><button id="outBtn" class="ghost" title="ඉවත් වන්න">⎋ ඉවත් වන්න</button></div>
+    <h2>පරණ Chats (History)</h2>
+    <div id="chatList"></div>
+  </div>
+
+  <div id="chat"></div>
+
+  <div class="composer">
+    <div id="chip"><span id="chipName"></span><b id="chipX" title="ඉවත් කරන්න">✕</b></div>
+    <div class="row">
+      <button id="attach" class="ghost" title="ලේඛනයක් upload කරන්න (PDF, DOCX, TXT, MD, PNG, JPG)">📎</button>
+      <textarea id="input" placeholder="අදහස ලියන්න, නැත්නම් 📎 එකෙන් system document එකක් දාන්න..."></textarea>
+      <button id="send">යවන්න</button>
+    </div>
+    <input type="file" id="file" hidden accept=".pdf,.docx,.txt,.md,.json,.csv,.html,.sql,.yaml,.yml,.xml,.png,.jpg,.jpeg,.webp">
+  </div>
+</div>
+
+<div class="right">
+  <div class="tabs">
+    <button class="tab active" data-t="flow">Flowchart</button>
+    <button class="tab" data-t="code">Code Blueprint</button>
+    <button class="tab" data-t="sec">Security Insights</button>
+    <button class="tab" data-t="gen">Full Code</button>
+  </div>
+  <div id="flow" class="pane active"></div>
+  <div id="code" class="pane"></div>
+  <div id="sec" class="pane"></div>
+  <div id="gen" class="pane"></div>
+</div>
+
+<div id="auth" class="auth" hidden><div class="box">
+  <h2 id="authTitle">ArchitectAI</h2>
+  <p id="authSub"></p>
+  <div class="seg"><button id="tabLogin" type="button">පිවිසෙන්න</button><button id="tabReg" type="button">අලුත් ගිණුම</button></div>
+  <label for="aName">ඔබේ නම</label><input class="f" id="aName" maxlength="30" autocomplete="username">
+  <label id="aPinLabel" for="aPin">Password (අවම අකුරු 12)</label><input class="f" id="aPin" type="password" minlength="12" maxlength="128" autocomplete="current-password">
+  <div id="aPin2Wrap"><label for="aPin2">නැවත ඇතුළත් කරන්න</label><input class="f" id="aPin2" type="password" minlength="12" maxlength="128" autocomplete="new-password"></div>
+  <div class="msgline" id="aMsg" role="alert"></div>
+  <button class="go" id="aGo" type="button"></button>
+</div></div>
+<dialog id="keyDlg"><div class="box">
+  <h2>🔑 ඔයාගේ Gemini API key</h2>
+  <p>මේ key එක ඔයාගේ ගිණුමට විතරයි. Password එකෙන් encrypt කරලා ඔයාගේ PC එකේම save වෙනවා, වෙන කාටවත් පෙනෙන්නේ නැහැ. නොමිලේ key එකක් ගන්න: aistudio.google.com/apikey</p>
+  <div id="kState" style="font-size:13px;color:var(--mute)"></div>
+  <label for="kIn">අලුත් API key එක</label><input class="f" id="kIn" type="password" autocomplete="off" placeholder="AIza...">
+  <div class="msgline" id="kMsg" role="alert"></div>
+  <div style="display:flex;gap:8px;margin-top:14px"><button id="kSave" type="button" style="flex:1;padding:10px">සුරකින්න</button><button id="kDel" class="ghost" type="button">ඉවත් කරන්න</button><button id="kClose" class="ghost" type="button">වසන්න</button></div>
+</div></dialog>
+<dialog id="passwordDlg"><div class="box">
+  <h2>🔒 Password එක වෙනස් කරන්න</h2>
+  <p>අලුත් password එක අකුරු 12ත් 128ත් අතර විය යුතුයි. Saved API key සහ chats අලුත් password එකෙන් නැවත encrypt වෙනවා.</p>
+  <label for="pCurrent">දැනට භාවිතා කරන password එක</label><input class="f" id="pCurrent" type="password" maxlength="128" autocomplete="current-password">
+  <label for="pNew">අලුත් password එක</label><input class="f" id="pNew" type="password" minlength="12" maxlength="128" autocomplete="new-password">
+  <label for="pConfirm">අලුත් password එක නැවත</label><input class="f" id="pConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password">
+  <div class="msgline" id="pMsg" role="alert"></div>
+  <div style="display:flex;gap:8px;margin-top:14px"><button id="pSave" type="button" style="flex:1;padding:10px">වෙනස් කරන්න</button><button id="pClose" class="ghost" type="button">වසන්න</button></div>
+</div></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+mermaid.initialize({
+  startOnLoad: false, theme: 'default', securityLevel: 'strict',
+  flowchart: { htmlLabels: false, useMaxWidth: false }   // plain SVG text -> PNG export works
+});
+const $ = id => document.getElementById(id);
+const _fetch = window.fetch.bind(window);
+window.fetch = async (...a) => {
+  const r = await _fetch(...a);
+  if (r.status === 401) showAuth();
+  else if (r.status === 400) r.clone().json().then(j => { if (j && j.code === 'NO_KEY') openKey(); }).catch(() => {});
+  return r;
+};
+const WELCOME = 'ආයුබෝවන්! ඔයාගේ ඇප් එකේ හෝ වෙබ් අඩවියේ අදහස කියන්න, නැත්නම් 📎 එකෙන් system/requirement document එකක් upload කරන්න. මම Flowchart, Code මාර්ගෝපදේශ සහ Security අවදානම් හදලා දෙන්නම්. Flow එක හදපු පස්සේ "Full Code" tab එකෙන් සම්පූර්ණ project code එකත් generate කරගන්න පුළුවන්.';
+const MAX_FILE = 15 * 1024 * 1024;
+let chatId = null, chatTitle = '', attached = null, counter = 0, currentCode = null;
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function addMsg(text, cls) { const m = el('div', 'msg ' + cls, text); $('chat').appendChild(m); $('chat').scrollTop = 1e9; return m; }
+function safeName() { return (chatTitle || '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'project'; }
+function saveBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+/* ---------- API key check ---------- */
+async function checkApi(announce) {
+  const b = $('apiStatus'); b.className = 'badge'; b.textContent = '● API...';
+  try {
+    const d = await (await fetch('/api/health')).json();
+    if (d.code === 'AUTH') return;
+    b.className = 'badge ' + (d.ok ? 'ok' : 'bad');
+    b.textContent = d.ok ? '● API OK' : '● API වැරදියි';
+    b.title = d.message;
+    if (!d.ok && /තවම දාලා නැහැ/.test(d.message)) openKey();
+    if (!d.ok || announce) addMsg((d.ok ? '' : '⚠️ ') + d.message, d.ok ? 'ai' : 'ai err');
+  } catch (e) {
+    b.className = 'badge bad'; b.textContent = '● API ?'; addMsg('Server එකට සම්බන්ධ වෙන්න බැහැ: ' + e.message, 'ai err');
+  }
+}
+$('apiStatus').onclick = () => checkApi(true);
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); $(t.dataset.t).classList.add('active');
+});
+
+function resetPanes() {
+  currentCode = null;
+  $('flow').replaceChildren(el('div', 'empty', 'Flowchart එක මෙතන පෙන්වයි'));
+  $('code').replaceChildren(el('div', 'empty', 'Code Blueprint එක මෙතන පෙන්වයි'));
+  $('sec').replaceChildren(el('div', 'empty', 'Security Insights මෙතන පෙන්වයි'));
+  $('gen').replaceChildren(el('div', 'empty', 'Flow එක හැදුවාම මෙතනින් සම්පූර්ණ project code එක generate කරගන්න පුළුවන්'));
+}
+
+/* ---------- flowchart download ---------- */
+function svgInfo(svgEl) {
+  const vb = svgEl.viewBox && svgEl.viewBox.baseVal;
+  const box = svgEl.getBoundingClientRect();
+  const w = Math.ceil((vb && vb.width) || box.width || 800), h = Math.ceil((vb && vb.height) || box.height || 600);
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', w); clone.setAttribute('height', h);
+  clone.style.maxWidth = 'none'; clone.style.background = '#ffffff';
+  return { w, h, xml: new XMLSerializer().serializeToString(clone) };
+}
+function downloadSvg(svgEl) {
+  const { xml } = svgInfo(svgEl);
+  saveBlob(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + xml], { type: 'image/svg+xml' }), safeName() + '-flowchart.svg');
+}
+function downloadPng(svgEl) {
+  const { w, h, xml } = svgInfo(svgEl);
+  const scale = Math.min(2, 8000 / Math.max(w, h));
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    c.toBlob(b => b ? saveBlob(b, safeName() + '-flowchart.png') : addMsg('PNG එක හදන්න බැරි වුණා. SVG එක download කරන්න.', 'ai err'), 'image/png');
+  };
+  img.onerror = () => addMsg('PNG එක හදන්න බැරි වුණා. SVG එක download කරන්න.', 'ai err');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+}
+
+/* ---------- renderers ---------- */
+async function renderFlow(r) {
+  const p = $('flow'); p.replaceChildren();
+  if (r.summary) p.appendChild(el('div', 'card', r.summary));
+  const box = el('div'); box.id = 'diagram'; p.appendChild(box);
+  try {
+    const code = String(r.mermaid || '').replace(/^```(?:mermaid)?|```$/g, '').trim();
+    const { svg } = await mermaid.render('m' + (++counter), code);
+    box.innerHTML = svg;
+    const svgEl = box.querySelector('svg');
+    const bar = el('div', 'bar');
+    const b1 = el('button', null, '⬇ PNG download'); b1.onclick = () => downloadPng(svgEl);
+    const b2 = el('button', 'ghost', '⬇ SVG download'); b2.onclick = () => downloadSvg(svgEl);
+    const b3 = el('button', 'ghost', '📋 Mermaid code copy');
+    b3.onclick = () => navigator.clipboard.writeText(code).then(() => { b3.textContent = '✅ Copied'; setTimeout(() => b3.textContent = '📋 Mermaid code copy', 1500); });
+    bar.append(b1, b2, b3); p.insertBefore(bar, box);
+  } catch (e) {
+    box.textContent = 'Flowchart එක render කරන්න බැරි වුණා. Code එක පහතින් බලන්න, නැත්නම් නැවත යවන්න.';
+    p.appendChild(el('pre', null, r.mermaid || ''));
+    document.querySelectorAll('[id^="dm"]').forEach(n => n.remove());
+  }
+  p.appendChild(el('h3', null, 'පියවරෙන් පියවර'));
+  (r.steps || []).forEach((s, i) => {
+    const c = el('div', 'card'); c.appendChild(el('b', null, `${i + 1}. ${s.title}`)); c.appendChild(el('span', null, s.detail)); p.appendChild(c);
+  });
+}
+function fileList(title, arr, p) {
+  p.appendChild(el('h3', null, title));
+  (arr || []).forEach(f => { const c = el('div', 'card'); c.appendChild(el('b', null, f.file)); c.appendChild(el('small', null, f.purpose)); p.appendChild(c); });
+}
+function renderCode(r) {
+  const p = $('code'); p.replaceChildren(); const g = r.code_guidance || {};
+  if (g.tech_stack?.length) { p.appendChild(el('h3', null, 'Tech Stack')); p.appendChild(el('div', 'card', g.tech_stack.join('  •  '))); }
+  fileList('Frontend', g.frontend, p);
+  fileList('Backend', g.backend, p);
+  if (g.snippet) { p.appendChild(el('h3', null, 'Starter Code')); p.appendChild(el('pre', null, g.snippet)); }
+}
+function renderSec(r) {
+  const p = $('sec'); p.replaceChildren();
+  (r.security || []).forEach(s => {
+    const c = el('div', 'card'); c.appendChild(el('b', null, '⚠️ ' + s.risk));
+    c.appendChild(el('small', null, s.where)); c.appendChild(el('div', 'fix', '✅ ' + s.fix)); p.appendChild(c);
+  });
+}
+
+/* ---------- full code generation ---------- */
+let genOpts = { scope: 'both', backend: 'auto', frontend: 'auto' }, optList = null;
+try { Object.assign(genOpts, JSON.parse(localStorage.getItem('aai_genopts') || '{}')); } catch {}
+async function loadOptList() {
+  if (!optList) { const r = await fetch('/api/codegen/options'); if (r.ok) optList = await r.json(); }
+  return optList;
+}
+function buildOpts() {
+  const box = el('div', 'opts');
+  box.appendChild(el('b', null, '⚙️ Code එක කොහොමද ඕන?'));
+  const scope = el('div', 'scope'), grid = el('div', 'grid'), bw = el('div'), fw = el('div');
+  const bs = el('select', 'f'), fs = el('select', 'f');
+  bw.append(el('small', null, 'Backend භාෂාව / framework'), bs); fw.append(el('small', null, 'Frontend භාෂාව / framework'), fs);
+  grid.append(bw, fw);
+  const sync = () => {
+    scope.querySelectorAll('label').forEach(l => l.classList.toggle('on', l.firstChild.checked));
+    bs.disabled = genOpts.scope === 'frontend'; fs.disabled = genOpts.scope === 'backend';
+    localStorage.setItem('aai_genopts', JSON.stringify(genOpts));
+  };
+  [['both', 'Backend + Frontend දෙකම'], ['backend', 'Backend විතරයි'], ['frontend', 'Frontend විතරයි']].forEach(([v, t]) => {
+    const l = el('label'), r = document.createElement('input');
+    r.type = 'radio'; r.name = 'gscope'; r.value = v; r.checked = genOpts.scope === v;
+    r.onchange = () => { genOpts.scope = v; sync(); };
+    l.append(r, t); scope.appendChild(l);
+  });
+  bs.onchange = () => { genOpts.backend = bs.value; sync(); };
+  fs.onchange = () => { genOpts.frontend = fs.value; sync(); };
+  box.append(scope, grid); sync();
+  loadOptList().then(L => {
+    if (!L) return;
+    const fill = (sel, list, cur) => list.forEach(o => {
+      const op = el('option', null, o.id === 'auto' ? 'Auto (design එකේ stack එක)' : o.label); op.value = o.id; sel.appendChild(op);
+    }) || (sel.value = list.some(o => o.id === cur) ? cur : 'auto');
+    fill(bs, L.backends, genOpts.backend); fill(fs, L.frontends, genOpts.frontend);
+  });
+  return box;
+}
+function renderGen(code) {
+  const p = $('gen'); p.replaceChildren();
+  p.appendChild(buildOpts());
+  const bar = el('div', 'bar');
+  const gb = el('button', null, code ? '🔄 අලුතින් generate කරන්න' : '⚙️ Full Code Generate කරන්න');
+  gb.onclick = () => genCode(gb);
+  bar.appendChild(gb);
+  if (code) { const zb = el('button', 'ghost', '⬇ ZIP download'); zb.onclick = () => downloadZip(code); bar.appendChild(zb); }
+  p.appendChild(bar);
+  if (!code) { p.appendChild(el('div', 'empty', 'ඉහළින් Backend / Frontend සහ භාෂාව තෝරලා generate කරන්න. ෆයිල් එකින් එක ලියන නිසා code එක අඩකින් කැඩෙන්නේ නැහැ. විනාඩි 1-2ක් යනවා.')); return; }
+  if (code.notes) p.appendChild(el('div', 'card', code.notes));
+  p.appendChild(el('h3', null, `ෆයිල් ${code.files.length}ක්`));
+  code.files.forEach(f => {
+    const d = el('details', 'card'); d.appendChild(el('summary', null, f.path));
+    const cp = el('button', 'ghost', '📋 Copy'); cp.style.cssText = 'margin-top:8px;padding:5px 10px';
+    cp.onclick = () => navigator.clipboard.writeText(f.content).then(() => { cp.textContent = '✅ Copied'; setTimeout(() => cp.textContent = '📋 Copy', 1500); });
+    d.appendChild(cp); d.appendChild(el('pre', null, f.content)); p.appendChild(d);
+  });
+}
+async function genCode(btn) {
+  if (!chatId) return;
+  const mine = chatId, wait = ms => new Promise(r => setTimeout(r, ms));
+  btn.disabled = true; btn.textContent = '⏳ ෆයිල් ලැයිස්තුව සැලසුම් කරමින්...';
+  const prog = el('div', 'prog'), fillBar = document.createElement('i'); prog.appendChild(fillBar); btn.parentNode.after(prog);
+  try {
+    const res = await fetch('/api/codegen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId, options: genOpts }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error);
+    for (;;) {
+      await wait(1500);
+      const pr = await fetch('/api/codegen/' + d.jobId), s = await pr.json();
+      if (!pr.ok) throw new Error(s.error);
+      if (s.state === 'error') throw new Error(s.error);
+      if (s.state === 'writing') { btn.textContent = `⏳ ෆයිල් ${s.done}/${s.total} ලියා ඉවරයි...`; fillBar.style.width = Math.max(4, Math.round(100 * s.done / s.total)) + '%'; }
+      if (s.state === 'done') { if (chatId === mine) currentCode = s.code; break; }
+    }
+    if (chatId === mine) renderGen(currentCode);
+  } catch (e) { addMsg(e.message, 'ai err'); if (chatId === mine) renderGen(currentCode); }
+}
+async function downloadZip(code) {
+  if (typeof JSZip === 'undefined') { addMsg('ZIP library එක load වුණේ නැහැ (internet බලන්න).', 'ai err'); return; }
+  const z = new JSZip(); code.files.forEach(f => z.file(f.path, f.content));
+  saveBlob(await z.generateAsync({ type: 'blob' }), safeName() + '-code.zip');
+}
+
+async function renderAll(r, code) {
+  await renderFlow(r); renderCode(r); renderSec(r);
+  currentCode = code || null; renderGen(currentCode);
+}
+
+/* ---------- history / menu ---------- */
+function fmtDate(ts) { return new Date(ts).toLocaleString('si-LK', { dateStyle: 'medium', timeStyle: 'short' }); }
+
+async function loadChats() {
+  const list = await (await fetch('/api/chats')).json();
+  const box = $('chatList'); box.replaceChildren();
+  if (!list.length) { box.appendChild(el('div', 'none', 'තවම chats නැහැ.')); return; }
+  list.forEach(c => {
+    const it = el('div', 'item' + (c.id === chatId ? ' active' : ''));
+    const wrap = el('div', 't'); wrap.appendChild(el('div', null, c.title)); wrap.appendChild(el('small', null, fmtDate(c.updated)));
+    const del = el('button', 'del', '🗑'); del.title = 'මකන්න';
+    del.onclick = async e => {
+      e.stopPropagation();
+      if (!confirm('මේ chat එක මකන්නද?')) return;
+      await fetch('/api/chats/' + c.id, { method: 'DELETE' });
+      if (c.id === chatId) newChat();
+      loadChats();
+    };
+    it.onclick = () => openChat(c.id);
+    it.append(wrap, del); box.appendChild(it);
+  });
+}
+
+async function openChat(id) {
+  const res = await fetch('/api/chats/' + id);
+  if (!res.ok) return;
+  const c = await res.json();
+  chatId = c.id; chatTitle = c.title; clearAttach();
+  $('chat').replaceChildren();
+  c.messages.forEach(m => {
+    if (m.role === 'user') addMsg((m.doc ? '📎 ' + m.doc + '\n' : '') + m.text, 'user');
+    else {
+      let t = '✅ Design එක සූදානම්.';
+      try { const j = JSON.parse(m.text); if (j.chat_reply) t = j.chat_reply; } catch {}
+      addMsg(t, 'ai');
+    }
+  });
+  resetPanes();
+  if (c.result) await renderAll(c.result, c.code);
+  $('drawer').classList.remove('open'); loadChats();
+}
+
+function newChat() {
+  chatId = null; chatTitle = ''; clearAttach();
+  $('chat').replaceChildren(); addMsg(WELCOME, 'ai');
+  resetPanes(); $('drawer').classList.remove('open'); $('input').focus();
+}
+
+$('menuBtn').onclick = () => { loadChats(); $('drawer').classList.toggle('open'); };
+$('newBtn').onclick = newChat;
+
+/* ---------- document upload ---------- */
+function clearAttach() { attached = null; $('chip').classList.remove('show'); $('file').value = ''; }
+$('attach').onclick = () => $('file').click();
+$('chipX').onclick = clearAttach;
+$('file').onchange = () => {
+  const f = $('file').files[0]; if (!f) return;
+  if (f.size > MAX_FILE) { addMsg('ෆයිල් එක ලොකු වැඩියි (උපරිම 15MB).', 'ai err'); clearAttach(); return; }
+  const fr = new FileReader();
+  fr.onload = () => {
+    attached = { name: f.name, data: String(fr.result).split(',')[1] };
+    $('chipName').textContent = '📎 ' + f.name; $('chip').classList.add('show');
+  };
+  fr.readAsDataURL(f);
+};
+
+/* ---------- send ---------- */
+function addOpenBtn(id) {
+  const b = el('button', 'ghost', '📂 ඒ project එක open කරන්න');
+  b.style.cssText = 'align-self:flex-start;padding:8px 12px';
+  b.onclick = () => openChat(id);
+  $('chat').appendChild(b); $('chat').scrollTop = 1e9;
+}
+
+async function send() {
+  const text = $('input').value.trim();
+  if (!text && !attached) return;
+  const file = attached;
+  $('input').value = ''; clearAttach();
+  addMsg((file ? '📎 ' + file.name + '\n' : '') + (text || 'ලේඛනය අනුව flow එක හදන්න'), 'user');
+  $('send').disabled = true; const wait = addMsg('සකස් කරමින්...', 'ai');
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId, text, file })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    chatId = data.chatId; chatTitle = data.title;
+    const r = data.result;
+    wait.textContent = r.chat_reply || '✅ සූදානම්! දකුණු පැත්තේ tabs බලන්න. වෙනස් කිරීමක් ඕන නම් කියන්න.';
+    if (r.open_chat_id) addOpenBtn(r.open_chat_id);
+    if (r.mermaid) await renderAll(r, null);
+    loadChats();
+  } catch (e) {
+    wait.className = 'msg ai err'; wait.textContent = e.message;
+  }
+  $('send').disabled = false;
+}
+$('send').onclick = send;
+$('input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+
+/* ---------- accounts & API key ---------- */
+let authMode = 'login';
+function setAuthMode(m) {
+  authMode = m;
+  $('tabLogin').classList.toggle('on', m === 'login'); $('tabReg').classList.toggle('on', m === 'reg');
+  $('aPin2Wrap').hidden = m !== 'reg';
+  $('aPinLabel').textContent = m === 'login' ? 'Password' : 'Password (අවම අකුරු 12)';
+  $('aPin').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('aGo').textContent = m === 'login' ? 'ඇතුල් වන්න' : 'ගිණුම සාදන්න';
+  $('authSub').textContent = m === 'login' ? 'ඔයාගේ ගිණුමට ඇතුල් වෙන්න. Chats සහ API key එක ඔයාට විතරයි.' : 'ඔයාගේම ගිණුමක් හදාගන්න. ඔයාගේ chats සහ API key එක වෙන කාටවත් පෙනෙන්නේ නැහැ.';
+  $('aMsg').textContent = '';
+}
+function wipeClient() {   // nothing of the previous user may stay on screen or in the browser
+  ['input', 'aName', 'aPin', 'aPin2', 'kIn', 'pCurrent', 'pNew', 'pConfirm'].forEach(id => $(id).value = '');
+  $('userName').textContent = '';
+  $('chatList').replaceChildren(); $('chat').replaceChildren(); resetPanes(); clearAttach();
+  chatId = null; chatTitle = ''; currentCode = null;
+  genOpts = { scope: 'both', backend: 'auto', frontend: 'auto' }; localStorage.removeItem('aai_genopts');
+}
+function showAuth(hasAccounts) {
+  if (!$('auth').hidden) return;
+  wipeClient();
+  $('keyDlg').open && $('keyDlg').close();
+  $('passwordDlg').open && $('passwordDlg').close();
+  $('auth').hidden = false; setAuthMode(hasAccounts === false ? 'reg' : 'login'); $('aName').focus();
+}
+async function submitAuth() {
+  const name = $('aName').value.trim(), pin = $('aPin').value;
+  if (authMode === 'reg' && pin !== $('aPin2').value) { $('aMsg').textContent = 'Password දෙක ගැළපෙන්නේ නැහැ.'; return; }
+  $('aGo').disabled = true;
+  try {
+    const r = await fetch('/api/auth/' + (authMode === 'login' ? 'login' : 'register'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, pin }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    $('aPin').value = ''; $('aPin2').value = '';
+    afterLogin(d.name, authMode === 'reg');
+  } catch (e) { $('aMsg').textContent = e.message; }
+  $('aGo').disabled = false;
+}
+$('tabLogin').onclick = () => setAuthMode('login'); $('tabReg').onclick = () => setAuthMode('reg');
+$('aGo').onclick = submitAuth;
+['aName', 'aPin', 'aPin2'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitAuth(); }));
+function afterLogin(name, fresh) {
+  $('auth').hidden = true; $('userName').textContent = '👤 ' + name;
+  currentCode = null; newChat(); checkApi(false);   // no key yet -> checkApi opens the key dialog
+}
+$('outBtn').onclick = async () => {
+  await _fetch('/api/auth/logout', { method: 'POST' });
+  $('drawer').classList.remove('open'); newChat(); showAuth(true);
+};
+async function openKey() {
+  if ($('keyDlg').open || !$('auth').hidden) return;
+  $('kIn').value = ''; $('kMsg').textContent = '';
+  try {
+    const s = await (await _fetch('/api/auth/status')).json();
+    $('kState').textContent = s.hasKey ? '✅ ඔයාගේ key එකක් save කරලා තියෙනවා.' : '⚠️ තවම key එකක් දාලා නැහැ.';
+  } catch {}
+  $('keyDlg').showModal(); $('kIn').focus();
+}
+async function saveKey(value) {
+  $('kSave').disabled = true;
+  try {
+    const r = await fetch('/api/auth/apikey', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: value }) });
+    const d = await r.json(); if (!r.ok) throw new Error(d.error);
+    $('keyDlg').close(); checkApi(true);
+  } catch (e) { $('kMsg').textContent = e.message; }
+  $('kSave').disabled = false;
+}
+$('keyBtn').onclick = () => { $('drawer').classList.remove('open'); openKey(); };
+$('kSave').onclick = () => { const v = $('kIn').value.trim(); if (!v) { $('kMsg').textContent = 'API key එක ඇතුළත් කරන්න.'; return; } saveKey(v); };
+$('kDel').onclick = () => { if (confirm('ඔයාගේ API key එක ඉවත් කරන්නද?')) saveKey(''); };
+$('kClose').onclick = () => $('keyDlg').close();
+$('keyDlg').addEventListener('close', () => { $('kIn').value = ''; });
+$('kIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('kSave').click(); });
+$('passwordBtn').onclick = () => {
+  $('drawer').classList.remove('open');
+  $('pCurrent').value = ''; $('pNew').value = ''; $('pConfirm').value = ''; $('pMsg').textContent = '';
+  $('passwordDlg').showModal(); $('pCurrent').focus();
+};
+$('pClose').onclick = () => $('passwordDlg').close();
+$('passwordDlg').addEventListener('close', () => {
+  $('pCurrent').value = ''; $('pNew').value = ''; $('pConfirm').value = '';
+});
+$('pSave').onclick = async () => {
+  const currentPassword = $('pCurrent').value, newPassword = $('pNew').value;
+  if (newPassword.length < 12 || newPassword.length > 128) { $('pMsg').textContent = 'අලුත් password එක අකුරු 12ත් 128ත් අතර විය යුතුයි.'; return; }
+  if (newPassword !== $('pConfirm').value) { $('pMsg').textContent = 'අලුත් password දෙක ගැළපෙන්නේ නැහැ.'; return; }
+  $('pSave').disabled = true;
+  try {
+    const r = await fetch('/api/auth/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    const d = await r.json(); if (!r.ok) throw new Error(d.error);
+    $('passwordDlg').close(); addMsg('Password එක වෙනස් කළා. Saved chats සහ API key අලුත් password එකෙන් encrypt කළා.', 'ai');
+  } catch (e) { $('pMsg').textContent = e.message; }
+  $('pSave').disabled = false;
+};
+async function boot() {
+  try {
+    const s = await (await _fetch('/api/auth/status')).json();
+    if (s.loggedIn) afterLogin(s.name); else showAuth(s.hasAccounts);
+  } catch (e) { addMsg('Server එකට සම්බන්ධ වෙන්න බැහැ: ' + e.message, 'ai err'); }
+}
+boot();
+</script>
+</body>
+</html>

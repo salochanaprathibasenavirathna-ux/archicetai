@@ -1,0 +1,53 @@
+name: Build and publish Windows release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check release tag matches package version
+        shell: pwsh
+        run: |
+          $expected = "v$((Get-Content package.json | ConvertFrom-Json).version)"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+            throw "Release tag $env:GITHUB_REF_NAME does not match package version $expected"
+          }
+
+      - name: Run tests
+        run: npm test
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      - name: Build portable Windows app
+        run: npm run build
+
+      - name: Verify release executable
+        run: |
+          if (!(Test-Path "dist\ArchitectAI.exe")) {
+            throw "Build did not create dist\ArchitectAI.exe"
+          }
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$env:GITHUB_REF_NAME" "dist\ArchitectAI.exe" --title "ArchitectAI $env:GITHUB_REF_NAME" --generate-notes
